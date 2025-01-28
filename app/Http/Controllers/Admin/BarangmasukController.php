@@ -98,6 +98,37 @@ class BarangmasukController extends Controller
         return response()->json(['success' => 'Berhasil']);
     }
 
+    public function proses_scan(Request $request)
+    {
+        // Assuming the scan sends a barcode or QR code value
+        $scannedCode = $request->input('scanned_code'); // This could be a barcode or QR code value
+
+        // Find the barang (item) using the scanned code
+        $barang = BarangModel::where('barang_kode', $scannedCode)->first();
+
+        if (!$barang) {
+            return response()->json(['error' => 'Barang tidak ditemukan'], 404);
+        }
+
+        // Find pengecek if needed, assuming it's available in the request or use a default
+        $pengecekId = $request->input('pengecek_id', 1); // Default pengecek_id (you can adjust this as needed)
+
+        // Generate BM code by combining "BM-" with current timestamp
+        $bmKode = 'BM-' . strtoupper($barang->barang_kode) . '-' . Carbon::now()->timestamp;
+
+        // Process the barangmasuk data (similar to the previous proses_tambah method)
+        BarangmasukModel::create([
+            'bm_tanggal' => Carbon::now()->format('Y-m-d'),
+            'bm_kode' => $bmKode, // Using the new BM code format
+            'barang_kode' => $barang->barang_kode,
+            'pengecek_id' => $pengecekId,
+            'bm_jumlah' => $request->input('jumlah', 1), // Default to 1 if no quantity is provided
+        ]);
+
+        return response()->json(['success' => 'Barang berhasil masuk melalui scan']);
+    }
+
+
 
     public function proses_ubah(Request $request, BarangmasukModel $barangmasuk)
     {
@@ -119,5 +150,4 @@ class BarangmasukController extends Controller
 
         return response()->json(['success' => 'Berhasil']);
     }
-
 }

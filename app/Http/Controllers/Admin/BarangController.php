@@ -14,24 +14,67 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Storage;
 use Yajra\DataTables\Facades\DataTables;
+use Picqer\Barcode\BarcodeGeneratorPNG;
+
 
 class BarangController extends Controller
 {
     public function index()
     {
         $data["title"] = "Barang";
-        $data["hakTambah"] = AksesModel::leftJoin('tbl_submenu', 'tbl_submenu.submenu_id', '=', 'tbl_akses.submenu_id')->where(array('tbl_akses.role_id' => Session::get('user')->role_id, 'tbl_submenu.submenu_judul' => 'Barang', 'tbl_akses.akses_type' => 'create'))->count();
-        $data["jenisbarang"] =  JenisBarangModel::orderBy('jenisbarang_id', 'DESC')->get();
-        $data["satuan"] =  SatuanModel::orderBy('satuan_id', 'DESC')->get();
-        $data["gudang"] =  GudangModel::orderBy('gudang_id', 'DESC')->get();
+        $data["hakTambah"] = AksesModel::leftJoin('tbl_submenu', 'tbl_submenu.submenu_id', '=', 'tbl_akses.submenu_id')
+            ->where(array(
+                'tbl_akses.role_id' => Session::get('user')->role_id,
+                'tbl_submenu.submenu_judul' => 'Barang',
+                'tbl_akses.akses_type' => 'create'
+            ))
+            ->count();
+        $data["jenisbarang"] = JenisBarangModel::orderBy('jenisbarang_id', 'DESC')->get();
+        $data["satuan"] = SatuanModel::orderBy('satuan_id', 'DESC')->get();
+        $data["gudang"] = GudangModel::orderBy('gudang_id', 'DESC')->get();
+
+        // Fetching barang data
+        $data["barang"] = BarangModel::all()->map(function ($item) {
+            // Assuming barcode image is stored in 'public/barang/barcodes/'
+            if (!is_null($item->barcode)) {
+                $item->barcodeUrl = asset('storage/barang/barcodes/' . $item->barcode);
+            } else {
+                $item->barcodeUrl = ''; // or set a default image if no barcode exists
+            }
+            return $item;
+        });
+
         return view('Admin.Barang.index', $data);
     }
 
+
     public function getbarang($id)
     {
-        $data = BarangModel::leftJoin('tbl_jenisbarang', 'tbl_jenisbarang.jenisbarang_id', '=', 'tbl_barang.jenisbarang_id')->leftJoin('tbl_satuan', 'tbl_satuan.satuan_id', '=', 'tbl_barang.satuan_id')->leftJoin('tbl_gudang', 'tbl_gudang.gudang_id', '=', 'tbl_barang.gudang_id')->where('tbl_barang.barang_kode', '=', $id)->get();
-        return json_encode($data);
+        // Ambil data barang berdasarkan kode barang
+        $data = BarangModel::leftJoin('tbl_jenisbarang', 'tbl_jenisbarang.jenisbarang_id', '=', 'tbl_barang.jenisbarang_id')
+            ->leftJoin('tbl_satuan', 'tbl_satuan.satuan_id', '=', 'tbl_barang.satuan_id')
+            ->leftJoin('tbl_gudang', 'tbl_gudang.gudang_id', '=', 'tbl_barang.gudang_id')
+            ->select(
+                'tbl_barang.*', // Ambil semua kolom dari tbl_barang termasuk barcode
+                'tbl_jenisbarang.jenisbarang_nama',
+                'tbl_satuan.satuan_nama',
+                'tbl_gudang.gudang_nama'
+            )
+            ->where('tbl_barang.barang_kode', '=', $id)
+            ->get();
+
+        // Hitung total jumlah data
+        $totalRecords = $data->count();
+
+        // Mengembalikan data dalam format yang diharapkan oleh DataTables
+        return response()->json([
+            'draw' => request('draw'),
+            'recordsTotal' => $totalRecords,
+            'recordsFiltered' => $totalRecords,
+            'data' => $data
+        ]);
     }
+
 
     public function show(Request $request)
     {
@@ -52,6 +95,18 @@ class BarangController extends Controller
 
                     return $img;
                 })
+                ->addColumn('barcode', function ($row) {
+                    if (!is_null($row->barcode)) {
+                        // Generate the URL for the barcode image
+                        $barcodeUrl = asset('storage/barang/barcodes/' . $row->barcode);
+                
+                        // Return the URL as the value for the column, not HTML
+                        return $barcodeUrl;
+                    } else {
+                        return '-';
+                    }
+                })                
+                
                 ->addColumn('jenisbarang', function ($row) {
                     $jenisbarang = $row->jenisbarang_id == '' ? '-' : $row->jenisbarang_nama;
 
@@ -87,14 +142,14 @@ class BarangController extends Controller
                     }
 
                     $totalstok = $row->barang_stok + ($jmlmasuk - $jmlkeluar);
-                    if($totalstok == 0){
-                        $result = '<span class="">'.$totalstok.'</span>';
-                    }else if($totalstok > 0){
-                        $result = '<span class="text-success">'.$totalstok.'</span>';
-                    }else{
-                        $result = '<span class="text-danger">'.$totalstok.'</span>';
+                    if ($totalstok == 0) {
+                        $result = '<span class="">' . $totalstok . '</span>';
+                    } else if ($totalstok > 0) {
+                        $result = '<span class="text-success">' . $totalstok . '</span>';
+                    } else {
+                        $result = '<span class="text-danger">' . $totalstok . '</span>';
                     }
-                    
+
 
                     return $result;
                 })
@@ -193,14 +248,14 @@ class BarangController extends Controller
                     }
 
                     $totalstok = $row->barang_stok + ($jmlmasuk - $jmlkeluar);
-                    if($totalstok == 0){
-                        $result = '<span class="">'.$totalstok.'</span>';
-                    }else if($totalstok > 0){
-                        $result = '<span class="text-success">'.$totalstok.'</span>';
-                    }else{
-                        $result = '<span class="text-danger">'.$totalstok.'</span>';
+                    if ($totalstok == 0) {
+                        $result = '<span class="">' . $totalstok . '</span>';
+                    } else if ($totalstok > 0) {
+                        $result = '<span class="text-success">' . $totalstok . '</span>';
+                    } else {
+                        $result = '<span class="text-danger">' . $totalstok . '</span>';
                     }
-                    
+
 
                     return $result;
                 })
@@ -237,7 +292,7 @@ class BarangController extends Controller
         $img = "";
         $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $request->nama)));
 
-        //upload image
+        // Upload image
         if ($request->file('foto') == null) {
             $img = "image.png";
         } else {
@@ -246,22 +301,38 @@ class BarangController extends Controller
             $img = $image->hashName();
         }
 
+        // Generate barcode for barang_kode
+        try {
+            $generator = new BarcodeGeneratorPNG();
+            $barcodeImage = $generator->getBarcode($request->kode, BarcodeGeneratorPNG::TYPE_CODE_128);
 
-        //create
-        BarangModel::create([
-            'barang_gambar' => $img,
-            'jenisbarang_id' => $request->jenisbarang,
-            'satuan_id' => $request->satuan,
-            'gudang_id' => $request->gudang,
-            'barang_kode' => $request->kode,
-            'barang_nama' => $request->nama,
-            'barang_slug' => $slug,
-            'barang_harga' => $request->harga,
-            'barang_stok' => 0,
+            // Store barcode image in the storage
+            $barcodePath = 'public/barang/barcodes/' . $request->kode . '.png';
+            Storage::put($barcodePath, $barcodeImage);
+            $barcodeFileName = basename($barcodePath);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Barcode generation failed: ' . $e->getMessage()], 500);
+        }
 
-        ]);
+        // Create new record in the database
+        try {
+            BarangModel::create([
+                'barang_gambar' => $img,
+                'jenisbarang_id' => $request->jenisbarang,
+                'satuan_id' => $request->satuan,
+                'gudang_id' => $request->gudang,
+                'barang_kode' => $request->kode,
+                'barang_nama' => $request->nama,
+                'barang_slug' => $slug,
+                'barang_harga' => $request->harga,
+                'barang_stok' => 0,
+                'barcode' => $barcodeFileName, // Store the barcode image file name
+            ]);
 
-        return response()->json(['success' => 'Berhasil']);
+            return response()->json(['success' => 'Berhasil']);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to create item: ' . $e->getMessage()], 500);
+        }
     }
 
     public function proses_ubah(Request $request, BarangModel $barang)
