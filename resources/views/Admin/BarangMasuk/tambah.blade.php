@@ -1,23 +1,31 @@
+<!-- Add QuaggaJS to your page -->
+<script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+
 <!-- MODAL TAMBAH -->
 <div class="modal fade" data-bs-backdrop="static" id="modaldemo8">
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div class="modal-content modal-content-demo">
             <div class="modal-header">
-                <h6 class="modal-title">Tambah Barang Masuk</h6><button onclick="reset()" aria-label="Close" class="btn-close" data-bs-dismiss="modal"><span aria-hidden="true">&times;</span></button>
+                <h6 class="modal-title">Tambah Barang Masuk</h6>
+                <button onclick="reset()" aria-label="Close" class="btn-close" data-bs-dismiss="modal"><span
+                        aria-hidden="true">&times;</span></button>
             </div>
             <div class="modal-body">
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label for="bmkode" class="form-label">Kode Barang Masuk <span class="text-danger">*</span></label>
+                            <label for="bmkode" class="form-label">Kode Barang Masuk <span
+                                    class="text-danger">*</span></label>
                             <input type="text" name="bmkode" readonly class="form-control" placeholder="">
                         </div>
                         <div class="form-group">
-                            <label for="tglmasuk" class="form-label">Tanggal Masuk <span class="text-danger">*</span></label>
+                            <label for="tglmasuk" class="form-label">Tanggal Masuk <span
+                                    class="text-danger">*</span></label>
                             <input type="text" name="tglmasuk" class="form-control datepicker-date" placeholder="">
                         </div>
                         <div class="form-group">
-                            <label for="pengecek" class="form-label">Pilih Pengecek <span class="text-danger">*</span></label>
+                            <label for="pengecek" class="form-label">Pilih Pengecek <span
+                                    class="text-danger">*</span></label>
                             <select name="pengecek" id="pengecek" class="form-control">
                                 <option value="">-- Pilih Pengecek --</option>
                                 @foreach ($pengecek as $c)
@@ -35,11 +43,17 @@
                                 </div>
                             </label>
                             <div class="input-group">
-                                <input type="text" class="form-control" autocomplete="off" name="kdbarang" placeholder="">
-                                <button class="btn btn-primary-light" onclick="searchBarang()" type="button"><i class="fe fe-search"></i></button>
-                                <button class="btn btn-success-light" onclick="modalBarang()" type="button"><i class="fe fe-box"></i></button>
+                                <input type="text" class="form-control" autocomplete="off" name="kdbarang"
+                                    placeholder="">
+                                <button class="btn btn-primary-light" onclick="searchBarang()" type="button"><i
+                                        class="fe fe-search"></i></button>
+                                <button class="btn btn-success-light" onclick="modalBarang()" type="button"><i
+                                        class="fe fe-box"></i></button>
+                                <button class="btn btn-warning-light" onclick="scanBarcode()" type="button"><i
+                                        class="fe fe-camera"></i> Scan</button>
                             </div>
                         </div>
+
                         <div class="form-group">
                             <label>Nama Barang</label>
                             <input type="text" class="form-control" id="nmbarang" readonly>
@@ -60,27 +74,62 @@
                         </div>
                         <div class="form-group">
                             <label for="jml" class="form-label">Jumlah Masuk <span class="text-danger">*</span></label>
-                            <input type="text" name="jml" value="0" class="form-control" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1').replace(/^0[^.]/, '0');" placeholder="">
+                            <input type="text" name="jml" value="0" class="form-control"
+                                oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1').replace(/^0[^.]/, '0');"
+                                placeholder="">
                         </div>
                     </div>
                 </div>
 
+                <!-- Updated scanner container -->
+                <div id="interactive" class="viewport" style="position: relative; width: 100%; height: 300px; display: none;">
+                    <video autoplay="true" preload="auto" style="width: 100%; height: 100%;"></video>
+                    <canvas class="drawingBuffer" style="position: absolute; top: 0; left: 0;"></canvas>
+                    <button class="btn btn-danger" style="position: absolute; top: 10px; right: 10px;" onclick="stopScanning()">
+                        <i class="fe fe-x"></i> Close Scanner
+                    </button>
+                </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary d-none" id="btnLoader" type="button" disabled="">
+                <button class="btn btn-primary d-none" id="btnLoader" type="button" disabled="true">
                     <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
                     Loading...
                 </button>
-                <a href="javascript:void(0)" onclick="checkForm()" id="btnSimpan" class="btn btn-primary">Simpan <i class="fe fe-check"></i></a>
-                <a href="javascript:void(0)" class="btn btn-light" onclick="reset()" data-bs-dismiss="modal">Batal <i class="fe fe-x"></i></a>
+                <a href="javascript:void(0)" onclick="checkForm()" id="btnSimpan" class="btn btn-primary">Simpan <i
+                        class="fe fe-check"></i></a>
+                <a href="javascript:void(0)" class="btn btn-light" onclick="reset()" data-bs-dismiss="modal">Batal <i
+                        class="fe fe-x"></i></a>
             </div>
         </div>
     </div>
 </div>
 
+<style>
+    .viewport {
+        position: relative;
+        width: 100%;
+        height: 300px;
+    }
+    .viewport > video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .viewport > canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+    .drawingBuffer {
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+</style>
 
 @section('formTambahJS')
 <script>
+    // Handle keypress on Kode Barang field
     $('input[name="kdbarang"]').keypress(function(event) {
         var keycode = (event.keyCode ? event.keyCode : event.which);
         if (keycode == '13') {
@@ -88,6 +137,7 @@
         }
     });
 
+    // Open Barang Modal
     function modalBarang() {
         $('#modalBarang').modal('show');
         $('#modaldemo8').addClass('d-none');
@@ -96,11 +146,13 @@
         table2.ajax.reload();
     }
 
+    // Search Barang by ID
     function searchBarang() {
         getbarangbyid($('input[name="kdbarang"]').val());
         resetValid();
     }
 
+    // Fetch Barang details by ID
     function getbarangbyid(id) {
         $("#loaderkd").removeClass('d-none');
         $.ajax({
@@ -127,6 +179,62 @@
         });
     }
 
+    // Barcode scanning functionality
+    function scanBarcode() {
+        $('#interactive').show();
+        
+        Quagga.init({
+            inputStream: {
+                name: "Live",
+                type: "LiveStream",
+                target: document.querySelector("#interactive"),
+                constraints: {
+                    facingMode: "environment" // Use back camera on mobile devices
+                },
+            },
+            decoder: {
+                readers: [
+                    "ean_reader",
+                    "ean_8_reader",
+                    "code_128_reader",
+                    "code_39_reader",
+                    "upc_reader"
+                ]
+            }
+        }, function(err) {
+            if (err) {
+                console.error(err);
+                alert("Error starting scanner: " + err);
+                return;
+            }
+            Quagga.start();
+        });
+
+        Quagga.onDetected(function(result) {
+            if (result && result.codeResult) {
+                var code = result.codeResult.code;
+                Quagga.stop();
+                $('#interactive').hide();
+                $('input[name="kdbarang"]').val(code);
+                getbarangbyid(code);
+            }
+        });
+    }
+
+    // Stop scanning function
+    function stopScanning() {
+        if (Quagga){
+            Quagga.stop();
+            $('#interactive').hide();
+        }
+    }
+
+    // Clean up when modal is closed
+    $('#modaldemo8').on('hidden.bs.modal', function () {
+        stopScanning();
+    });
+
+    // Form validation
     function checkForm() {
         const tglmasuk = $("input[name='tglmasuk']").val();
         const status = $("#status").val();
@@ -158,9 +266,9 @@
         } else {
             submitForm();
         }
-
     }
 
+    // Submit form
     function submitForm() {
         const bmkode = $("input[name='bmkode']").val();
         const tglmasuk = $("input[name='tglmasuk']").val();
@@ -187,18 +295,19 @@
                 });
                 table.ajax.reload(null, false);
                 reset();
-
             }
         });
     }
 
+    // Reset form validation
     function resetValid() {
         $("input[name='tglmasuk']").removeClass('is-invalid');
         $("input[name='kdbarang']").removeClass('is-invalid');
         $("select[name='pengecek']").removeClass('is-invalid');
         $("input[name='jml']").removeClass('is-invalid');
-    };
+    }
 
+    // Reset form
     function reset() {
         resetValid();
         $("input[name='bmkode']").val('');
@@ -211,15 +320,17 @@
         $("#jenis").val('');
         $("#status").val('false');
         setLoading(false);
+        stopScanning();
     }
 
+    // Toggle loading state
     function setLoading(bool) {
-        if (bool == true) {
-            $('#btnLoader').removeClass('d-none');
-            $('#btnSimpan').addClass('d-none');
+        if (bool) {
+            $("#btnLoader").removeClass('d-none');
+            $("#btnSimpan").addClass('d-none');
         } else {
-            $('#btnSimpan').removeClass('d-none');
-            $('#btnLoader').addClass('d-none');
+            $("#btnLoader").addClass('d-none');
+            $("#btnSimpan").removeClass('d-none');
         }
     }
 </script>
