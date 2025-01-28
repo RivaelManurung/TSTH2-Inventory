@@ -42,6 +42,7 @@ $appreance = AppreanceModel::where('user_id', '=', Session::get('user')->user_id
     <link href="{{ url('/assets/css/transparent-style.css') }}" rel="stylesheet">
     <link href="{{ url('/assets/css/skin-modes.css') }}" rel="stylesheet" />
 
+    
     <!--- FONT-ICONS CSS -->
     <link href="{{ url('/assets/css/icons.css') }}" rel="stylesheet" />
 
@@ -255,6 +256,13 @@ $appreance = AppreanceModel::where('user_id', '=', Session::get('user')->user_id
 <script src="{{ url('/assets/plugins/chart/Chart.bundle.js') }}"></script>
 <script src="{{ url('/assets/plugins/chart/rounded-barchart.js') }}"></script>
 <script src="{{ url('/assets/plugins/chart/utils.js') }}"></script>
+
+
+<!-- BOOTSTRAP BUNDLE JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- QUAGGA JS -->
+<script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
 
 <!-- DATA TABLE JS-->
 <script src="{{ url('/assets/plugins/datatable/js/jquery.dataTables.min.js') }}"></script>

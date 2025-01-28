@@ -3,21 +3,26 @@
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div class="modal-content modal-content-demo">
             <div class="modal-header">
-                <h6 class="modal-title">Tambah Barang Masuk</h6><button onclick="reset()" aria-label="Close" class="btn-close" data-bs-dismiss="modal"><span aria-hidden="true">&times;</span></button>
+                <h6 class="modal-title">Tambah Barang Masuk</h6>
+                <button onclick="reset()" aria-label="Close" class="btn-close" data-bs-dismiss="modal"><span
+                        aria-hidden="true">&times;</span></button>
             </div>
             <div class="modal-body">
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label for="bmkode" class="form-label">Kode Barang Masuk <span class="text-danger">*</span></label>
+                            <label for="bmkode" class="form-label">Kode Barang Masuk <span
+                                    class="text-danger">*</span></label>
                             <input type="text" name="bmkode" readonly class="form-control" placeholder="">
                         </div>
                         <div class="form-group">
-                            <label for="tglmasuk" class="form-label">Tanggal Masuk <span class="text-danger">*</span></label>
+                            <label for="tglmasuk" class="form-label">Tanggal Masuk <span
+                                    class="text-danger">*</span></label>
                             <input type="text" name="tglmasuk" class="form-control datepicker-date" placeholder="">
                         </div>
                         <div class="form-group">
-                            <label for="pengecek" class="form-label">Pilih Pengecek <span class="text-danger">*</span></label>
+                            <label for="pengecek" class="form-label">Pilih Pengecek <span
+                                    class="text-danger">*</span></label>
                             <select name="pengecek" id="pengecek" class="form-control">
                                 <option value="">-- Pilih Pengecek --</option>
                                 @foreach ($pengecek as $c)
@@ -35,11 +40,17 @@
                                 </div>
                             </label>
                             <div class="input-group">
-                                <input type="text" class="form-control" autocomplete="off" name="kdbarang" placeholder="">
-                                <button class="btn btn-primary-light" onclick="searchBarang()" type="button"><i class="fe fe-search"></i></button>
-                                <button class="btn btn-success-light" onclick="modalBarang()" type="button"><i class="fe fe-box"></i></button>
+                                <input type="text" class="form-control" autocomplete="off" name="kdbarang"
+                                    placeholder="">
+                                <button class="btn btn-primary-light" onclick="searchBarang()" type="button"><i
+                                        class="fe fe-search"></i></button>
+                                <button class="btn btn-success-light" onclick="modalBarang()" type="button"><i
+                                        class="fe fe-box"></i></button>
+                                <button class="btn btn-warning-light" onclick="scanBarcode()" type="button"><i
+                                        class="fe fe-camera"></i> Scan</button>
                             </div>
                         </div>
+
                         <div class="form-group">
                             <label>Nama Barang</label>
                             <input type="text" class="form-control" id="nmbarang" readonly>
@@ -60,27 +71,34 @@
                         </div>
                         <div class="form-group">
                             <label for="jml" class="form-label">Jumlah Masuk <span class="text-danger">*</span></label>
-                            <input type="text" name="jml" value="0" class="form-control" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1').replace(/^0[^.]/, '0');" placeholder="">
+                            <input type="text" name="jml" value="0" class="form-control"
+                                oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1').replace(/^0[^.]/, '0');"
+                                placeholder="">
                         </div>
                     </div>
                 </div>
 
+                <!-- Container for the camera stream -->
+                <div id="scanner-container" style="width: 100%; height: 300px; display: none;"></div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary d-none" id="btnLoader" type="button" disabled="">
+                <button class="btn btn-primary d-none" id="btnLoader" type="button" disabled="true">
                     <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
                     Loading...
                 </button>
-                <a href="javascript:void(0)" onclick="checkForm()" id="btnSimpan" class="btn btn-primary">Simpan <i class="fe fe-check"></i></a>
-                <a href="javascript:void(0)" class="btn btn-light" onclick="reset()" data-bs-dismiss="modal">Batal <i class="fe fe-x"></i></a>
+                <a href="javascript:void(0)" onclick="checkForm()" id="btnSimpan" class="btn btn-primary">Simpan <i
+                        class="fe fe-check"></i></a>
+                <a href="javascript:void(0)" class="btn btn-light" onclick="reset()" data-bs-dismiss="modal">Batal <i
+                        class="fe fe-x"></i></a>
             </div>
         </div>
     </div>
 </div>
 
-
 @section('formTambahJS')
+
 <script>
+    // Handle keypress on Kode Barang field
     $('input[name="kdbarang"]').keypress(function(event) {
         var keycode = (event.keyCode ? event.keyCode : event.which);
         if (keycode == '13') {
@@ -88,6 +106,7 @@
         }
     });
 
+    // Open Barang Modal
     function modalBarang() {
         $('#modalBarang').modal('show');
         $('#modaldemo8').addClass('d-none');
@@ -96,11 +115,13 @@
         table2.ajax.reload();
     }
 
+    // Search Barang by ID
     function searchBarang() {
         getbarangbyid($('input[name="kdbarang"]').val());
         resetValid();
     }
 
+    // Fetch Barang details by ID
     function getbarangbyid(id) {
         $("#loaderkd").removeClass('d-none');
         $.ajax({
@@ -127,6 +148,7 @@
         });
     }
 
+    // Validate the form fields before submitting
     function checkForm() {
         const tglmasuk = $("input[name='tglmasuk']").val();
         const status = $("#status").val();
@@ -158,9 +180,9 @@
         } else {
             submitForm();
         }
-
     }
 
+    // Submit the form
     function submitForm() {
         const bmkode = $("input[name='bmkode']").val();
         const tglmasuk = $("input[name='tglmasuk']").val();
@@ -187,11 +209,11 @@
                 });
                 table.ajax.reload(null, false);
                 reset();
-
             }
         });
     }
 
+    // Reset form validation styles
     function resetValid() {
         $("input[name='tglmasuk']").removeClass('is-invalid');
         $("input[name='kdbarang']").removeClass('is-invalid');
@@ -199,6 +221,7 @@
         $("input[name='jml']").removeClass('is-invalid');
     };
 
+    // Reset form fields
     function reset() {
         resetValid();
         $("input[name='bmkode']").val('');
@@ -213,6 +236,7 @@
         setLoading(false);
     }
 
+    // Toggle loading state
     function setLoading(bool) {
         if (bool == true) {
             $('#btnLoader').removeClass('d-none');
@@ -222,5 +246,23 @@
             $('#btnLoader').addClass('d-none');
         }
     }
+
+    // scanBarcode
+    function scanBarcode() {
+        // Display the camera container
+        $('#scanner-container').show();
+
+        // Create a container for displaying the camera stream if it doesn't exist
+        if (!document.querySelector('#scanner-container')) {
+            const scannerContainer = document.createElement('div');
+            scannerContainer.id = 'scanner-container';
+            scannerContainer.style.width = '100%';
+            scannerContainer.style.height = '300px';
+            document.body.appendChild(scannerContainer);
+        }
+
+        // Initialize scanner library or custom scanner logic
+        // Assuming you have a scanner library like QuaggaJS or others
+        // Here you should write code to start the barcode scanner
+    }
 </script>
-@endsection

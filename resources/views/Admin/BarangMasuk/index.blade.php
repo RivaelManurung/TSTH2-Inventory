@@ -24,11 +24,10 @@
                     <a class="modal-effect btn btn-primary-light" onclick="generateID()"
                         data-bs-effect="effect-super-scaled" data-bs-toggle="modal" href="#modaldemo8">Tambah Data
                         <i class="fe fe-plus"></i></a>
-                    <a class="modal-effect btn btn-success-light" onclick="generateID()"
-                        data-bs-effect="effect-super-scaled" data-bs-toggle="modal" data-bs-target="#modaldemo9">Tambah
+                    {{-- <a class="modal-effect btn btn-success-light" onclick="generateID()"
+                        data-bs-effect="effect-super-scaled" data-bs-toggle="modal" href="#modalscan">Tambah
                         Data Melalui Scan
-                        <i class="fe fe-camera"></i></a>
-                    <button data-bs-toggle="modal" data-bs-target="#modaldemo9">Open Modal</button>
+                        <i class="fe fe-camera"></i></a> --}}
 
                 </div>
                 @endif

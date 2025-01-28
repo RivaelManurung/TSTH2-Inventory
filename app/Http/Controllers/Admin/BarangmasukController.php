@@ -68,6 +68,7 @@ class BarangmasukController extends Controller
                             <a class="btn modal-effect text-primary btn-sm" data-bs-effect="effect-super-scaled" data-bs-toggle="modal" href="#Umodaldemo8" data-bs-toggle="tooltip" data-bs-original-title="Edit" onclick=update(' . json_encode($array) . ')><span class="fe fe-edit text-success fs-14"></span></a>
                         </div>
                         ';
+                        
                     } else if ($hakEdit == 0 && $hakDelete > 0) {
                         $button .= '
                         <div class="g-2">

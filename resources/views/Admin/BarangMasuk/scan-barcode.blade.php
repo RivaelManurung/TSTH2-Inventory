@@ -1,23 +1,28 @@
+
 <!-- MODAL TAMBAH -->
-<div class="modal fade" data-bs-backdrop="static" id="modaldemo9">
+<div class="modal fade" data-bs-backdrop="static" id="modalscan">
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
         <div class="modal-content modal-content-demo">
             <div class="modal-header">
-                <h6 class="modal-title">Tambah Barang Masuk</h6><button onclick="reset()" aria-label="Close" class="btn-close" data-bs-dismiss="modal"><span aria-hidden="true">&times;</span></button>
+                <h6 class="modal-title">Tambah Barang Masuk</h6><button onclick="reset()" aria-label="Close"
+                    class="btn-close" data-bs-dismiss="modal"><span aria-hidden="true">&times;</span></button>
             </div>
             <div class="modal-body">
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label for="bmkode" class="form-label">Kode Barang Masuk <span class="text-danger">*</span></label>
+                            <label for="bmkode" class="form-label">Kode Barang Masuk <span
+                                    class="text-danger">*</span></label>
                             <input type="text" name="bmkode" readonly class="form-control" placeholder="">
                         </div>
                         <div class="form-group">
-                            <label for="tglmasuk" class="form-label">Tanggal Masuk <span class="text-danger">*</span></label>
+                            <label for="tglmasuk" class="form-label">Tanggal Masuk <span
+                                    class="text-danger">*</span></label>
                             <input type="text" name="tglmasuk" class="form-control datepicker-date" placeholder="">
                         </div>
                         <div class="form-group">
-                            <label for="pengecek" class="form-label">Pilih Pengecek <span class="text-danger">*</span></label>
+                            <label for="pengecek" class="form-label">Pilih Pengecek <span
+                                    class="text-danger">*</span></label>
                             <select name="pengecek" id="pengecek" class="form-control">
                                 <option value="">-- Pilih Pengecek --</option>
                                 @foreach ($pengecek as $c)
@@ -35,10 +40,14 @@
                                 </div>
                             </label>
                             <div class="input-group">
-                                <input type="text" class="form-control" autocomplete="off" name="kdbarang" placeholder="" id="barcode-input">
-                                <button class="btn btn-primary-light" onclick="searchBarang()" type="button"><i class="fe fe-search"></i></button>
-                                <button class="btn btn-success-light" onclick="modalBarang()" type="button"><i class="fe fe-box"></i></button>
-                                <button class="btn btn-warning-light" onclick="scanBarcode()" type="button"><i class="fe fe-camera"></i> Scan</button>
+                                <input type="text" class="form-control" autocomplete="off" name="kdbarang"
+                                    placeholder="" id="barcode-input">
+                                <button class="btn btn-primary-light" onclick="searchBarang()" type="button"><i
+                                        class="fe fe-search"></i></button>
+                                <button class="btn btn-success-light" onclick="modalBarang()" type="button"><i
+                                        class="fe fe-box"></i></button>
+                                <button class="btn btn-warning-light" onclick="scanBarcode()" type="button"><i
+                                        class="fe fe-camera"></i> Scan</button>
                             </div>
                         </div>
                         <div class="form-group">
@@ -61,7 +70,9 @@
                         </div>
                         <div class="form-group">
                             <label for="jml" class="form-label">Jumlah Masuk <span class="text-danger">*</span></label>
-                            <input type="text" name="jml" value="0" class="form-control" oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1').replace(/^0[^.]/, '0');" placeholder="">
+                            <input type="text" name="jml" value="0" class="form-control"
+                                oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1').replace(/^0[^.]/, '0');"
+                                placeholder="">
                         </div>
                     </div>
                 </div>
@@ -71,8 +82,10 @@
                     <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
                     Loading...
                 </button>
-                <a href="javascript:void(0)" onclick="checkForm()" id="btnSimpan" class="btn btn-primary">Simpan <i class="fe fe-check"></i></a>
-                <a href="javascript:void(0)" class="btn btn-light" onclick="reset()" data-bs-dismiss="modal">Batal <i class="fe fe-x"></i></a>
+                <a href="javascript:void(0)" onclick="checkForm()" id="btnSimpan" class="btn btn-primary">Simpan <i
+                        class="fe fe-check"></i></a>
+                <a href="javascript:void(0)" class="btn btn-light" onclick="reset()" data-bs-dismiss="modal">Batal <i
+                        class="fe fe-x"></i></a>
             </div>
         </div>
     </div>
@@ -108,43 +121,55 @@
 
     // Fungsi untuk menyimpan data barang masuk
     function submitScan() {
-        var barcode = $('#barcode').val();
-        var nmbarang = $('#nmbarang').val();
-        var satuan = $('#satuan').val();
-        var jenis = $('#jenis').val();
-        var tglmasuk = $("input[name='tglmasuk']").val();
-        var jml = $("input[name='jml']").val();
-        var pengecek = $("select[name='pengecek']").val();
+    var barcode = $('#barcode-input').val();  // Make sure this matches the ID of the input field
+    var nmbarang = $('#nmbarang').val();
+    var satuan = $('#satuan').val();
+    var jenis = $('#jenis').val();
+    var tglmasuk = $("input[name='tglmasuk']").val();
+    var jml = $("input[name='jml']").val();
+    var pengecek = $("select[name='pengecek']").val();
 
-        // Validasi input
-        if (!tglmasuk || !jml || !pengecek) {
-            alert('Harap lengkapi semua data!');
-            return;
-        }
-
-        $.ajax({
-            type: 'POST',
-            url: "{{ route('barang-masuk.store') }}",
-            data: {
-                barcode: barcode,
-                tglmasuk: tglmasuk,
-                jml: jml,
-                pengecek: pengecek,
-                _token: '{{ csrf_token() }}'
-            },
-            success: function (response) {
-                alert('Barang berhasil ditambahkan!');
-                // Reset Form
-                $('#barcode').val('');
-                $('#barangDetails').hide();
-                $("input[name='tglmasuk']").val('');
-                $("input[name='jml']").val('0');
-                $("select[name='pengecek']").val('');
-            },
-            error: function () {
-                alert('Terjadi kesalahan!');
-            }
-        });
+    // Validasi input
+    if (!tglmasuk || !jml || !pengecek || !barcode) {
+        alert('Harap lengkapi semua data!');
+        return;
     }
+
+    // Validasi jumlah (harus angka)
+    if (isNaN(jml) || jml <= 0) {
+        alert('Jumlah harus berupa angka positif!');
+        return;
+    }
+
+    // Mengirimkan data ke backend
+    $.ajax({
+        type: 'POST',
+        url: "{{ route('barang-masuk.store') }}", // Endpoint untuk menyimpan data barang masuk
+        data: {
+            barcode: barcode,
+            nmbarang: nmbarang,
+            satuan: satuan,
+            jenis: jenis,
+            tglmasuk: tglmasuk,
+            jml: jml,
+            pengecek: pengecek,
+            _token: $('meta[name="csrf-token"]').attr('content')
+        },
+        success: function(response) {
+            if (response.success) {
+                alert('Data berhasil disimpan!');
+                $('#modalscan').modal('hide');  // Menutup modal setelah berhasil
+                table.ajax.reload();  // Reload tabel untuk menampilkan data terbaru
+            } else {
+                alert('Terjadi kesalahan saat menyimpan data.');
+            }
+        },
+        error: function(xhr, status, error) {
+            alert('Terjadi kesalahan jaringan: ' + error);
+        }
+    });
+}
+
+
 </script>
 @endsection
