@@ -82,10 +82,12 @@
                 </div>
 
                 <!-- Updated scanner container -->
-                <div id="interactive" class="viewport" style="position: relative; width: 100%; height: 300px; display: none;">
+                <div id="interactive" class="viewport"
+                    style="position: relative; width: 100%; height: 300px; display: none;">
                     <video autoplay="true" preload="auto" style="width: 100%; height: 100%;"></video>
                     <canvas class="drawingBuffer" style="position: absolute; top: 0; left: 0;"></canvas>
-                    <button class="btn btn-danger" style="position: absolute; top: 10px; right: 10px;" onclick="stopScanning()">
+                    <button class="btn btn-danger" style="position: absolute; top: 10px; right: 10px;"
+                        onclick="stopScanning()">
                         <i class="fe fe-x"></i> Close Scanner
                     </button>
                 </div>
@@ -110,16 +112,19 @@
         width: 100%;
         height: 300px;
     }
-    .viewport > video {
+
+    .viewport>video {
         width: 100%;
         height: 100%;
         object-fit: cover;
     }
-    .viewport > canvas {
+
+    .viewport>canvas {
         position: absolute;
         top: 0;
         left: 0;
     }
+
     .drawingBuffer {
         position: absolute;
         top: 0;
@@ -129,6 +134,7 @@
 
 @section('formTambahJS')
 <script>
+    
     // Handle keypress on Kode Barang field
     $('input[name="kdbarang"]').keypress(function(event) {
         var keycode = (event.keyCode ? event.keyCode : event.which);
@@ -180,59 +186,129 @@
     }
 
     // Barcode scanning functionality
-    function scanBarcode() {
-        $('#interactive').show();
-        
-        Quagga.init({
-            inputStream: {
-                name: "Live",
-                type: "LiveStream",
-                target: document.querySelector("#interactive"),
-                constraints: {
-                    facingMode: "environment" // Use back camera on mobile devices
-                },
-            },
-            decoder: {
-                readers: [
-                    "ean_reader",
-                    "ean_8_reader",
-                    "code_128_reader",
-                    "code_39_reader",
-                    "upc_reader"
-                ]
+// Inisialisasi QuaggaJS dan mulai scan
+function scanBarcode() {
+    $('#interactive').show();
+    
+    Quagga.init({
+        inputStream: {
+            name: "Live",
+            type: "LiveStream",
+            target: document.querySelector("#interactive"),
+            constraints: {
+                facingMode: "environment", // Kamera belakang untuk perangkat mobile
+                width: 640,
+                height: 480
             }
-        }, function(err) {
-            if (err) {
-                console.error(err);
-                alert("Error starting scanner: " + err);
-                return;
-            }
-            Quagga.start();
-        });
+        },
+        locator: {
+            patchSize: "medium",
+            halfSample: true
+        },
+        numOfWorkers: 4,
+        decoder: {
+            readers: [
+                "code_128_reader",
+                "ean_reader",
+                "ean_8_reader",
+                "code_39_reader",
+                "upc_reader",
+                "upc_e_reader",
+                "codabar_reader",
+                "qr_code_reader" // Membaca kode QR juga
+            ],
+        }
+    }, function(err) {
+        if (err) {
+            console.error("Quagga init error:", err);
+            alert("Error saat memulai scanner: " + err);
+            return;
+        }
+        console.log("Scanner berhasil diinisialisasi");
+        Quagga.start();
+    });
 
-        Quagga.onDetected(function(result) {
-            if (result && result.codeResult) {
-                var code = result.codeResult.code;
-                Quagga.stop();
-                $('#interactive').hide();
-                $('input[name="kdbarang"]').val(code);
-                getbarangbyid(code);
-            }
-        });
-    }
-
-    // Stop scanning function
-    function stopScanning() {
-        if (Quagga){
+    Quagga.onDetected(function(result) {
+        if (result && result.codeResult) {
+            var code = result.codeResult.code;
+            console.log("Barcode/QR Code terdeteksi:", code);
+            
+            // Hentikan scanning setelah terdeteksi
             Quagga.stop();
             $('#interactive').hide();
+
+            // Tampilkan hasil di field input
+            $('#kdbarang').val(code);
+
+            // Ambil data barang dari server berdasarkan kode
+            getBarangById(code);
         }
+    });
+}
+
+// Mengambil data barang berdasarkan kode yang dipindai
+function getBarangById(id) {
+    $.ajax({
+        type: 'GET',
+        url: '/barang/getById/' + id, // Ganti dengan URL API yang sesuai
+        dataType: 'json',
+        success: function(data) {
+            if (data) {
+                // Mengisi data barang yang ditemukan ke form
+                $('#nmbarang').val(data.nama_barang);
+                $('#satuan').val(data.satuan);
+                $('#jenis').val(data.jenis);
+            } else {
+                alert('Barang tidak ditemukan');
+            }
+        },
+        error: function() {
+            alert('Terjadi kesalahan saat mengambil data barang');
+        }
+    });
+}
+
+// Fungsi untuk menghentikan scanner
+function stopScanning() {
+    Quagga.stop();
+    $('#interactive').hide();
+}
+
+// Fungsi untuk menyimpan data barang masuk
+function saveData() {
+    const kodeBarang = $('#kdbarang').val();
+    const namaBarang = $('#nmbarang').val();
+    const jumlahMasuk = $('#jml').val();
+
+    if (!kodeBarang || !namaBarang || !jumlahMasuk) {
+        alert('Semua data harus diisi');
+        return;
     }
 
-    // Clean up when modal is closed
-    $('#modaldemo8').on('hidden.bs.modal', function () {
-        stopScanning();
+    // Lakukan request ke server untuk menyimpan data
+    $.ajax({
+        type: 'POST',
+        url: '/barangMasuk', // Ganti dengan URL API yang sesuai
+        data: {
+            kode_barang: kodeBarang,
+            nama_barang: namaBarang,
+            jumlah_masuk: jumlahMasuk
+        },
+        success: function(response) {
+            alert('Data berhasil disimpan');
+            // Tutup modal
+            $('#modaldemo8').modal('hide');
+        },
+        error: function() {
+            alert('Terjadi kesalahan saat menyimpan data');
+        }
     });
+}
+
+// Clean up saat modal ditutup
+$('#modaldemo8').on('hidden.bs.modal', function () {
+    stopScanning();
+});
 
     // Form validation
     function checkForm() {
