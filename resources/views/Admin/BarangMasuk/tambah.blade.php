@@ -1,5 +1,5 @@
-<!-- Add QuaggaJS to your page -->
-<script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+<!-- Add html5-qrcode to your page -->
+<script src="{{ url('/assets/js/html5-qrcode.min.js') }}"></script>
 
 <!-- MODAL TAMBAH -->
 <div class="modal fade" data-bs-backdrop="static" id="modaldemo8">
@@ -185,94 +185,77 @@
         });
     }
 
-    // Barcode scanning functionality
-// Inisialisasi QuaggaJS dan mulai scan
+// Fungsi untuk memulai pemindaian barcode dengan html5-qrcode
 function scanBarcode() {
     $('#interactive').show();
-    
-    Quagga.init({
-        inputStream: {
-            name: "Live",
-            type: "LiveStream",
-            target: document.querySelector("#interactive"),
-            constraints: {
-                facingMode: "environment", // Kamera belakang untuk perangkat mobile
-                width: 640,
-                height: 480
-            }
-        },
-        locator: {
-            patchSize: "medium",
-            halfSample: true
-        },
-        numOfWorkers: 4,
-        decoder: {
-            readers: [
-                "code_128_reader",
-                "ean_reader",
-                "ean_8_reader",
-                "code_39_reader",
-                "upc_reader",
-                "upc_e_reader",
-                "codabar_reader",
-                "qr_code_reader" // Membaca kode QR juga
-            ],
-        }
-    }, function(err) {
-        if (err) {
-            console.error("Quagga init error:", err);
-            alert("Error saat memulai scanner: " + err);
-            return;
-        }
-        console.log("Scanner berhasil diinisialisasi");
-        Quagga.start();
-    });
 
-    Quagga.onDetected(function(result) {
-        if (result && result.codeResult) {
-            var code = result.codeResult.code;
-            console.log("Barcode/QR Code terdeteksi:", code);
-            
-            // Hentikan scanning setelah terdeteksi
-            Quagga.stop();
-            $('#interactive').hide();
+    const qrCodeSuccessCallback = (decodedText, decodedResult) => {
+        // Saat QR code berhasil dipindai
+        $('input[name="kdbarang"]').val(decodedText);
+        getbarangbyid(decodedText);
+        stopScanning();  // Hentikan scanner setelah berhasil memindai
+    };
 
-            // Tampilkan hasil di field input
-            $('#kdbarang').val(code);
+    const qrCodeErrorCallback = (errorMessage) => {
+        // Jika terjadi kesalahan pada pemindaian
+        console.warn("QR code error: ", errorMessage);
+    };
 
-            // Ambil data barang dari server berdasarkan kode
-            getBarangById(code);
-        }
-    });
-}
+    const config = {
+        fps: 10, // frames per second
+        qrbox: 250, // ukuran kotak pemindaian
+    };
 
-// Mengambil data barang berdasarkan kode yang dipindai
-function getBarangById(id) {
-    $.ajax({
-        type: 'GET',
-        url: '/barang/getById/' + id, // Ganti dengan URL API yang sesuai
-        dataType: 'json',
-        success: function(data) {
-            if (data) {
-                // Mengisi data barang yang ditemukan ke form
-                $('#nmbarang').val(data.nama_barang);
-                $('#satuan').val(data.satuan);
-                $('#jenis').val(data.jenis);
-            } else {
-                alert('Barang tidak ditemukan');
-            }
-        },
-        error: function() {
-            alert('Terjadi kesalahan saat mengambil data barang');
-        }
+    // Inisialisasi scanner HTML5
+    const html5QrCode = new Html5Qrcode("interactive");
+
+    // Mulai pemindaian
+    html5QrCode.start(
+        { facingMode: "environment" }, // menggunakan kamera belakang
+        config,
+        qrCodeSuccessCallback,
+        qrCodeErrorCallback
+    ).catch(err => {
+        console.error("Error saat memulai scanner: ", err);
+        alert("Error saat memulai scanner: " + err);
     });
 }
 
 // Fungsi untuk menghentikan scanner
 function stopScanning() {
-    Quagga.stop();
-    $('#interactive').hide();
+    const html5QrCode = new Html5Qrcode("interactive");
+    html5QrCode.stop().then((ignore) => {
+        // Sukses menghentikan pemindaian
+        console.log("Scanner berhenti");
+    }).catch((err) => {
+        // Kesalahan saat menghentikan scanner
+        console.error("Error saat menghentikan scanner: ", err);
+    });
+    $('#interactive').hide();  // Menyembunyikan elemen pemindaian
 }
+
+// Mengambil data barang berdasarkan kode yang dipindai
+// function getBarangById(id) {
+//     $.ajax({
+//         type: 'GET',
+//         url: '/barang/getById/' + id, // Ganti dengan URL API yang sesuai
+//         dataType: 'json',
+//         success: function(data) {
+//             if (data) {
+//                 // Mengisi data barang yang ditemukan ke form
+//                 $('#nmbarang').val(data.nama_barang);
+//                 $('#satuan').val(data.satuan);
+//                 $('#jenis').val(data.jenis);
+//             } else {
+//                 alert('Barang tidak ditemukan');
+//             }
+//         },
+//         error: function() {
+//             alert('Terjadi kesalahan saat mengambil data barang');
+//         }
+//     });
+// }
+
 
 // Fungsi untuk menyimpan data barang masuk
 function saveData() {
