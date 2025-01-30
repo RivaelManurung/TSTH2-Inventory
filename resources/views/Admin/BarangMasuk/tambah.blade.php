@@ -1,3 +1,6 @@
+<!-- Add Instascan library to your page -->
+<script type="text/javascript" src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
+
 <!-- MODAL TAMBAH -->
 <div class="modal fade" data-bs-backdrop="static" id="modaldemo8">
     <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
@@ -78,8 +81,16 @@
                     </div>
                 </div>
 
-                <!-- Container for the camera stream -->
-                <div id="scanner-container" style="width: 100%; height: 300px; display: none;"></div>
+                <!-- Updated scanner container -->
+                <div id="interactive" class="viewport"
+                    style="position: relative; width: 100%; height: 300px; display: none;">
+                    <video autoplay="true" preload="auto" style="width: 100%; height: 100%;"></video>
+                    <canvas class="drawingBuffer" style="position: absolute; top: 0; left: 0;"></canvas>
+                    <button class="btn btn-danger" style="position: absolute; top: 10px; right: 10px;"
+                        onclick="stopScanning()">
+                        <i class="fe fe-x"></i> Close Scanner
+                    </button>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-primary d-none" id="btnLoader" type="button" disabled="true">
@@ -95,14 +106,90 @@
     </div>
 </div>
 
-@section('formTambahJS')
+<style>
+    .viewport {
+        position: relative;
+        width: 100%;
+        height: 300px;
+    }
 
+    .viewport>video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .viewport>canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    .drawingBuffer {
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+</style>
+
+@section('formTambahJS')
 <script>
-    // Handle keypress on Kode Barang field
+    let scanner = null;
+
+    // Start barcode scanning using Instascan
+    function scanBarcode() {
+        $('#interactive').show();
+
+        if (!scanner) { // Hindari inisialisasi ulang jika scanner sudah ada
+            scanner = new Instascan.Scanner({ video: document.querySelector('#interactive video') });
+
+            scanner.addListener('scan', function (decodedText) {
+                $('input[name="kdbarang"]').val(decodedText);
+                getbarangbyid(decodedText);
+                stopScanning(); // Stop scanner setelah scan berhasil
+            });
+
+            Instascan.Camera.getCameras().then(function (cameras) {
+                if (cameras.length > 0) {
+                    scanner.start(cameras[0]); // Gunakan kamera pertama
+                } else {
+                    console.error("No cameras found.");
+                    alert("No cameras found.");
+                }
+            }).catch(function (err) {
+                console.error("Error accessing cameras:", err);
+                alert("Error accessing cameras: " + err);
+            });
+        }
+    }
+
+    // Stop scanner function
+    function stopScanning() {
+        if (scanner) {
+            scanner.stop();
+            scanner = null;
+        }
+        $('#interactive').hide();
+    }
+
+    // Clean up scanner when modal is closed
+    $('#modaldemo8').on('hidden.bs.modal', stopScanning);
+
+    // Reset form function
+    function reset() {
+        resetValid();
+        $("input[name='bmkode'], input[name='tglmasuk'], input[name='kdbarang'], #nmbarang, #satuan, #jenis").val('');
+        $("select[name='pengecek']").val('');
+        $("input[name='jml']").val('0');
+        $("#status").val('false');
+        setLoading(false);
+        stopScanning();
+    }
+
+    // Handle keypress on Kode Barang field (Enter key)
     $('input[name="kdbarang"]').keypress(function(event) {
-        var keycode = (event.keyCode ? event.keyCode : event.which);
-        if (keycode == '13') {
-            getbarangbyid($('input[name="kdbarang"]').val());
+        if (event.which === 13) { // Keycode 13 = Enter
+            getbarangbyid($(this).val());
         }
     });
 
@@ -121,148 +208,109 @@
         resetValid();
     }
 
-    // Fetch Barang details by ID
-    function getbarangbyid(id) {
+    // Fetch Barang Data by ID
+    async function getbarangbyid(id) {
+        console.log("Fetching barang with ID:", id);
         $("#loaderkd").removeClass('d-none');
-        $.ajax({
-            type: 'GET',
-            url: "{{ url('admin/barang/getbarang') }}/" + id,
-            processData: false,
-            contentType: false,
-            dataType: 'json',
-            success: function(data) {
-                if (data.length > 0) {
-                    $("#loaderkd").addClass('d-none');
-                    $("#status").val("true");
-                    $("#nmbarang").val(data[0].barang_nama);
-                    $("#satuan").val(data[0].satuan_nama);
-                    $("#jenis").val(data[0].jenisbarang_nama);
-                } else {
-                    $("#loaderkd").addClass('d-none');
-                    $("#status").val("false");
-                    $("#nmbarang").val('');
-                    $("#satuan").val('');
-                    $("#jenis").val('');
-                }
+
+        try {
+            let response = await $.ajax({
+                type: 'GET',
+                url: `{{ url('admin/barang/getbarang') }}/${id}`,
+                dataType: 'json'
+            });
+
+            console.log("Response from server:", response);
+            $("#loaderkd").addClass('d-none');
+
+            if (response && response.length > 0) {
+                let barang = response[0];
+                console.log("Barang data:", barang);
+                $("#status").val("true");
+                $("#nmbarang").val(barang.barang_nama || '');
+                $("#satuan").val(barang.satuan_nama || '');
+                $("#jenis").val(barang.jenisbarang_nama || '');
+            } else {
+                $("#status").val("false");
+                $("#nmbarang, #satuan, #jenis").val('');
+                validasi('Barang tidak ditemukan!', 'warning');
             }
-        });
+        } catch (error) {
+            console.error("Error fetching barang:", error);
+            $("#loaderkd").addClass('d-none');
+            validasi('Terjadi kesalahan saat mengambil data barang.', 'error');
+        }
     }
 
-    // Validate the form fields before submitting
+    // Form Validation
     function checkForm() {
         const tglmasuk = $("input[name='tglmasuk']").val();
         const status = $("#status").val();
         const pengecek = $("select[name='pengecek']").val();
         const jml = $("input[name='jml']").val();
+
         setLoading(true);
         resetValid();
 
-        if (tglmasuk == "") {
+        if (!tglmasuk) {
             validasi('Tanggal Masuk wajib di isi!', 'warning');
             $("input[name='tglmasuk']").addClass('is-invalid');
-            setLoading(false);
-            return false;
-        } else if (pengecek == "") {
+        } else if (!pengecek) {
             validasi('Pengecek wajib di pilih!', 'warning');
             $("select[name='pengecek']").addClass('is-invalid');
-            setLoading(false);
-            return false;
-        } else if (status == "false") {
+        } else if (status === "false") {
             validasi('Barang wajib di pilih!', 'warning');
             $("input[name='kdbarang']").addClass('is-invalid');
-            setLoading(false);
-            return false;
-        } else if (jml == "" || jml == "0") {
+        } else if (!jml || jml === "0") {
             validasi('Jumlah Masuk wajib di isi!', 'warning');
             $("input[name='jml']").addClass('is-invalid');
-            setLoading(false);
-            return false;
         } else {
             submitForm();
+            return;
         }
-    }
-
-    // Submit the form
-    function submitForm() {
-        const bmkode = $("input[name='bmkode']").val();
-        const tglmasuk = $("input[name='tglmasuk']").val();
-        const kdbarang = $("input[name='kdbarang']").val();
-        const pengecek = $("select[name='pengecek']").val();
-        const jml = $("input[name='jml']").val();
-
-        $.ajax({
-            type: 'POST',
-            url: "{{ route('barang-masuk.store') }}",
-            enctype: 'multipart/form-data',
-            data: {
-                bmkode: bmkode,
-                tglmasuk: tglmasuk,
-                barang: kdbarang,
-                pengecek: pengecek,
-                jml: jml
-            },
-            success: function(data) {
-                $('#modaldemo8').modal('toggle');
-                swal({
-                    title: "Berhasil ditambah!",
-                    type: "success"
-                });
-                table.ajax.reload(null, false);
-                reset();
-            }
-        });
-    }
-
-    // Reset form validation styles
-    function resetValid() {
-        $("input[name='tglmasuk']").removeClass('is-invalid');
-        $("input[name='kdbarang']").removeClass('is-invalid');
-        $("select[name='pengecek']").removeClass('is-invalid');
-        $("input[name='jml']").removeClass('is-invalid');
-    };
-
-    // Reset form fields
-    function reset() {
-        resetValid();
-        $("input[name='bmkode']").val('');
-        $("input[name='tglmasuk']").val('');
-        $("input[name='kdbarang']").val('');
-        $("select[name='pengecek']").val('');
-        $("input[name='jml']").val('0');
-        $("#nmbarang").val('');
-        $("#satuan").val('');
-        $("#jenis").val('');
-        $("#status").val('false');
         setLoading(false);
     }
 
-    // Toggle loading state
-    function setLoading(bool) {
-        if (bool == true) {
-            $('#btnLoader').removeClass('d-none');
-            $('#btnSimpan').addClass('d-none');
-        } else {
-            $('#btnSimpan').removeClass('d-none');
-            $('#btnLoader').addClass('d-none');
+    // Submit Form Data
+    async function submitForm() {
+        const data = {
+            bmkode: $("input[name='bmkode']").val(),
+            tglmasuk: $("input[name='tglmasuk']").val(),
+            barang: $("input[name='kdbarang']").val(),
+            pengecek: $("select[name='pengecek']").val(),
+            jml: $("input[name='jml']").val()
+        };
+
+        try {
+            await $.ajax({
+                type: 'POST',
+                url: "{{ route('barang-masuk.store') }}",
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                data: data,
+                enctype: 'multipart/form-data'
+            });
+
+            $('#modaldemo8').modal('toggle');
+            swal({ title: "Berhasil ditambah!", type: "success" });
+            table.ajax.reload(null, false);
+            reset();
+        } catch (error) {
+            console.error("Error submitting form:", error);
+            validasi('Gagal menyimpan data!', 'error');
         }
     }
 
-    // scanBarcode
-    function scanBarcode() {
-        // Display the camera container
-        $('#scanner-container').show();
+    // Reset form validation
+    function resetValid() {
+        $("input, select").removeClass('is-invalid');
+    }
 
-        // Create a container for displaying the camera stream if it doesn't exist
-        if (!document.querySelector('#scanner-container')) {
-            const scannerContainer = document.createElement('div');
-            scannerContainer.id = 'scanner-container';
-            scannerContainer.style.width = '100%';
-            scannerContainer.style.height = '300px';
-            document.body.appendChild(scannerContainer);
-        }
-
-        // Initialize scanner library or custom scanner logic
-        // Assuming you have a scanner library like QuaggaJS or others
-        // Here you should write code to start the barcode scanner
+    // Toggle loading state
+    function setLoading(state) {
+        $("#btnLoader").toggleClass('d-none', !state);
+        $("#btnSimpan").toggleClass('d-none', state);
     }
 </script>
+@endsection
