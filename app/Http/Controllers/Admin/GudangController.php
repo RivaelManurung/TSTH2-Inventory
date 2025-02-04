@@ -3,104 +3,144 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Admin\AksesModel;
-use App\Models\Admin\GudangModel;
+use App\Models\GudangModel;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Session;
-use Yajra\DataTables\Facades\DataTables;
+use Illuminate\Support\Facades\Validator;
 
 class GudangController extends Controller
 {
     public function index()
     {
-        $data["title"] = "Gudang";
-        $data["hakTambah"] = AksesModel::leftJoin('tbl_submenu', 'tbl_submenu.submenu_id', '=', 'tbl_akses.submenu_id')->where(array('tbl_akses.role_id' => Session::get('user')->role_id, 'tbl_submenu.submenu_judul' => 'Gudang', 'tbl_akses.akses_type' => 'create'))->count();
-        return view('Admin.Gudang.index', $data);
-    }
-
-    public function show(Request $request)
-    {
-        if ($request->ajax()) {
-            $data = GudangModel::orderBy('gudang_id', 'DESC')->get();
-            return Datatables::of($data)
-                ->addIndexColumn()
-                ->addColumn('ket', function ($row) {
-                    $ket = $row->gudang_keterangan == '' ? '-' : $row->gudang_keterangan;
-
-                    return $ket;
-                })
-                ->addColumn('action', function ($row) {
-                    $array = array(
-                        "gudang_id" => $row->gudang_id,
-                        "gudang_nama" => trim(preg_replace('/[^A-Za-z0-9-]+/', '_', $row->gudang_nama)),
-                        "gudang_keterangan" => trim(preg_replace('/[^A-Za-z0-9-]+/', '_', $row->gudang_keterangan))
-                    );
-                    $button = '';
-                    $hakEdit = AksesModel::leftJoin('tbl_submenu', 'tbl_submenu.submenu_id', '=', 'tbl_akses.submenu_id')->where(array('tbl_akses.role_id' => Session::get('user')->role_id, 'tbl_submenu.submenu_judul' => 'Gudang', 'tbl_akses.akses_type' => 'update'))->count();
-                    $hakDelete = AksesModel::leftJoin('tbl_submenu', 'tbl_submenu.submenu_id', '=', 'tbl_akses.submenu_id')->where(array('tbl_akses.role_id' => Session::get('user')->role_id, 'tbl_submenu.submenu_judul' => 'Gudang', 'tbl_akses.akses_type' => 'delete'))->count();
-                    if ($hakEdit > 0 && $hakDelete > 0) {
-                        $button .= '
-                        <div class="g-2">
-                        <a class="btn modal-effect text-primary btn-sm" data-bs-effect="effect-super-scaled" data-bs-toggle="modal" href="#Umodaldemo8" data-bs-toggle="tooltip" data-bs-original-title="Edit" onclick=update(' . json_encode($array) . ')><span class="fe fe-edit text-success fs-14"></span></a>
-                        <a class="btn modal-effect text-danger btn-sm" data-bs-effect="effect-super-scaled" data-bs-toggle="modal" href="#Hmodaldemo8" onclick=hapus(' . json_encode($array) . ')><span class="fe fe-trash-2 fs-14"></span></a>
-                        </div>
-                        ';
-                    } else if ($hakEdit > 0 && $hakDelete == 0) {
-                        $button .= '
-                        <div class="g-2">
-                            <a class="btn modal-effect text-primary btn-sm" data-bs-effect="effect-super-scaled" data-bs-toggle="modal" href="#Umodaldemo8" data-bs-toggle="tooltip" data-bs-original-title="Edit" onclick=update(' . json_encode($array) . ')><span class="fe fe-edit text-success fs-14"></span></a>
-                        </div>
-                        ';
-                    } else if ($hakEdit == 0 && $hakDelete > 0) {
-                        $button .= '
-                        <div class="g-2">
-                        <a class="btn modal-effect text-danger btn-sm" data-bs-effect="effect-super-scaled" data-bs-toggle="modal" href="#Hmodaldemo8" onclick=hapus(' . json_encode($array) . ')><span class="fe fe-trash-2 fs-14"></span></a>
-                        </div>
-                        ';
-                    } else {
-                        $button .= '-';
-                    }
-                    return $button;
-                })
-                ->rawColumns(['action', 'ket'])->make(true);
+        try {
+            $gudangs = GudangModel::orderBy('gudang_id', 'DESC')->get();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Daftar Gudang',
+                'data' => $gudangs
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengambil data gudang',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 
-    public function proses_tambah(Request $request)
+    public function show($id)
     {
-        $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $request->gudang)));
+        try {
+            $gudang = GudangModel::findOrFail($id);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Detail Gudang',
+                'data' => $gudang
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gudang tidak ditemukan',
+                'error' => $e->getMessage()
+            ], 404);
+        }
+    }
 
-        //insert data
-        GudangModel::create([
-            'gudang_nama' => $request->gudang,
-            'gudang_slug' => $slug,
-            'gudang_keterangan'   => $request->ket,
+    public function store(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'gudang' => 'required|string|max:255',
+            'ket' => 'nullable|string|max:500'
         ]);
 
-        return response()->json(['success' => 'Berhasil']);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $request->gudang)));
+
+            $gudang = GudangModel::create([
+                'gudang_nama' => $request->gudang,
+                'gudang_slug' => $slug,
+                'gudang_keterangan' => $request->ket ?? '',
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Gudang berhasil ditambahkan',
+                'data' => $gudang
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menambahkan gudang',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
-    public function proses_ubah(Request $request, GudangModel $gudang)
+    public function update(Request $request, $id)
     {
-        $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $request->gudang)));
-
-        //update data
-        $gudang->update([
-            'gudang_nama' => $request->gudang,
-            'gudang_slug' => $slug,
-            'gudang_keterangan'  => $request->ket,
+        $validator = Validator::make($request->all(), [
+            'gudang' => 'required|string|max:255',
+            'ket' => 'nullable|string|max:500'
         ]);
 
-        return response()->json(['success' => 'Berhasil']);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $gudang = GudangModel::findOrFail($id);
+
+            $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $request->gudang)));
+
+            $gudang->update([
+                'gudang_nama' => $request->gudang,
+                'gudang_slug' => $slug,
+                'gudang_keterangan' => $request->ket ?? '',
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Gudang berhasil diupdate',
+                'data' => $gudang
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengupdate gudang',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
-    
-    public function proses_hapus(Request $request, GudangModel $gudang)
+    public function destroy($id)
     {
-        //delete
-        $gudang->delete();
+        try {
+            $gudang = GudangModel::findOrFail($id);
+            $gudang->delete();
 
-        return response()->json(['success' => 'Berhasil']);
+            return response()->json([
+                'success' => true,
+                'message' => 'Gudang berhasil dihapus'
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus gudang',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
-
 }

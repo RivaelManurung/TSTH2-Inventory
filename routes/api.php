@@ -1,19 +1,31 @@
 <?php
 
-use Illuminate\Http\Request;
+// use App\Http\Controllers\Admin\LoginController;
+
+
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\LoginController;
+use App\Http\Controllers\Admin\GudangController;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| is assigned the "api" middleware group. Enjoy building your API!
-|
-*/
+Route::group([
+    'middleware' => 'api',
+    'prefix' => 'auth'
+], function ($router) {
+    Route::post('/register', [LoginController::class, 'register']);
+    Route::post('/login', [LoginController::class, 'login']);
+    Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth:api');
+    Route::post('/refresh', [LoginController::class, 'refresh'])->middleware('auth:api');
+    Route::post('/profile', [LoginController::class, 'profile'])->middleware('auth:api');
+});
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+// Add Gudang routes with API middleware and authentication
+Route::group([
+    'middleware' => ['api', 'auth:api'],
+    'prefix' => 'gudang'
+], function ($router) {
+    Route::get('/', [GudangController::class, 'index']);
+    Route::post('/', [GudangController::class, 'store']);
+    Route::get('/{id}', [GudangController::class, 'show']);
+    Route::put('/{id}', [GudangController::class, 'update']);
+    Route::delete('/{id}', [GudangController::class, 'destroy']);
 });

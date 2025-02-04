@@ -1,393 +1,254 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+// namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\Admin\AksesModel;
-use App\Models\Admin\BarangkeluarModel;
-use App\Models\Admin\BarangmasukModel;
-use App\Models\Admin\BarangModel;
-use App\Models\Admin\JenisBarangModel;
-use App\Models\Admin\GudangModel;
-use App\Models\Admin\SatuanModel;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Session;
-use Illuminate\Support\Facades\Storage;
-use Yajra\DataTables\Facades\DataTables;
-use Picqer\Barcode\BarcodeGeneratorPNG;
+// use App\Http\Controllers\Controller;
+// use App\Models\Admin\AksesModel;
+// use App\Models\Admin\BarangkeluarModel;
+// use App\Models\Admin\BarangmasukModel;
+// use App\Models\Admin\BarangModel;
+// use App\Models\Admin\JenisBarangModel;
+// use App\Models\Admin\GudangModel;
+// use App\Models\Admin\SatuanModel;
+// use Illuminate\Http\Request;
+// use Illuminate\Support\Facades\Storage;
+// use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
+// class BarangController extends Controller
+// {
+//     public function index()
+//     {
+//         try {
+//             $barang = BarangModel::with(['jenisBarang', 'satuan', 'gudang'])->get()->map(function ($item) {
+//                 if (!is_null($item->barcode)) {
+//                     $item->barcodeUrl = asset('storage/barang/barcodes/' . $item->barcode);
+//                 } else {
+//                     $item->barcodeUrl = null;
+//                 }
+//                 return $item;
+//             });
 
-class BarangController extends Controller
-{
-    public function index()
-    {
-        $data["title"] = "Barang";
-        $data["hakTambah"] = AksesModel::leftJoin('tbl_submenu', 'tbl_submenu.submenu_id', '=', 'tbl_akses.submenu_id')
-            ->where(array(
-                'tbl_akses.role_id' => Session::get('user')->role_id,
-                'tbl_submenu.submenu_judul' => 'Barang',
-                'tbl_akses.akses_type' => 'create'
-            ))
-            ->count();
-        $data["jenisbarang"] = JenisBarangModel::orderBy('jenisbarang_id', 'DESC')->get();
-        $data["satuan"] = SatuanModel::orderBy('satuan_id', 'DESC')->get();
-        $data["gudang"] = GudangModel::orderBy('gudang_id', 'DESC')->get();
+//             return response()->json([
+//                 'status' => 'success',
+//                 'data' => [
+//                     'barang' => $barang,
+//                     'jenisbarang' => JenisBarangModel::orderBy('jenisbarang_id', 'DESC')->get(),
+//                     'satuan' => SatuanModel::orderBy('satuan_id', 'DESC')->get(),
+//                     'gudang' => GudangModel::orderBy('gudang_id', 'DESC')->get()
+//                 ]
+//             ]);
+//         } catch (\Exception $e) {
+//             return response()->json([
+//                 'status' => 'error',
+//                 'message' => $e->getMessage()
+//             ], 500);
+//         }
+//     }
 
-        // Fetching barang data
-        $data["barang"] = BarangModel::all()->map(function ($item) {
-            // Assuming barcode image is stored in 'public/barang/barcodes/'
-            if (!is_null($item->barcode)) {
-                $item->barcodeUrl = asset('storage/barang/barcodes/' . $item->barcode);
-            } else {
-                $item->barcodeUrl = ''; // or set a default image if no barcode exists
-            }
-            return $item;
-        });
+//     public function getBarang($id)
+//     {
+//         try {
+//             $barang = BarangModel::with(['jenisBarang', 'satuan', 'gudang'])
+//                 ->where('barang_kode', $id)
+//                 ->first();
 
-        return view('Admin.Barang.index', $data);
-    }
+//             if (!$barang) {
+//                 return response()->json([
+//                     'status' => 'error',
+//                     'message' => 'Barang not found'
+//                 ], 404);
+//             }
 
+//             return response()->json([
+//                 'status' => 'success',
+//                 'data' => $barang
+//             ]);
+//         } catch (\Exception $e) {
+//             return response()->json([
+//                 'status' => 'error',
+//                 'message' => $e->getMessage()
+//             ], 500);
+//         }
+//     }
 
-    public function getbarang($id)
-    {
-        // Ambil data barang berdasarkan kode barang
-        $data = BarangModel::leftJoin('tbl_jenisbarang', 'tbl_jenisbarang.jenisbarang_id', '=', 'tbl_barang.jenisbarang_id')
-            ->leftJoin('tbl_satuan', 'tbl_satuan.satuan_id', '=', 'tbl_barang.satuan_id')
-            ->leftJoin('tbl_gudang', 'tbl_gudang.gudang_id', '=', 'tbl_barang.gudang_id')
-            ->select(
-                'tbl_barang.*', // Ambil semua kolom dari tbl_barang termasuk barcode
-                'tbl_jenisbarang.jenisbarang_nama',
-                'tbl_satuan.satuan_nama',
-                'tbl_gudang.gudang_nama'
-            )
-            ->where('tbl_barang.barang_kode', '=', $id)
-            ->get();
+//     public function store(Request $request)
+//     {
+//         try {
+//             // Validate request
+//             $request->validate([
+//                 'nama' => 'required',
+//                 'kode' => 'required|unique:tbl_barang,barang_kode',
+//                 'jenisbarang' => 'required',
+//                 'satuan' => 'required',
+//                 'gudang' => 'required',
+//                 'harga' => 'required|numeric',
+//                 'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
+//             ]);
 
-        // Hitung total jumlah data
-        $totalRecords = $data->count();
+//             $img = "image.png";
+//             $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $request->nama)));
 
-        // Mengembalikan data dalam format yang diharapkan oleh DataTables
-        return response()->json([
-            'draw' => request('draw'),
-            'recordsTotal' => $totalRecords,
-            'recordsFiltered' => $totalRecords,
-            'data' => $data
-        ]);
-    }
+//             // Handle image upload
+//             if ($request->hasFile('foto')) {
+//                 $image = $request->file('foto');
+//                 $image->storeAs('public/barang/', $image->hashName());
+//                 $img = $image->hashName();
+//             }
 
+//             // Generate QR Code
+//             $qrCodePath = 'public/barang/barcodes/' . $request->kode . '.png';
+//             $qrCode = QrCode::format('png')->size(200)->generate($request->kode);
+//             Storage::put($qrCodePath, $qrCode);
+//             $qrCodeFileName = basename($qrCodePath);
 
-    public function show(Request $request)
-    {
-        if ($request->ajax()) {
+//             // Create barang
+//             $barang = BarangModel::create([
+//                 'barang_gambar' => $img,
+//                 'jenisbarang_id' => $request->jenisbarang,
+//                 'satuan_id' => $request->satuan,
+//                 'gudang_id' => $request->gudang,
+//                 'barang_kode' => $request->kode,
+//                 'barang_nama' => $request->nama,
+//                 'barang_slug' => $slug,
+//                 'barang_harga' => $request->harga,
+//                 'barang_stok' => 0,
+//                 'barcode' => $qrCodeFileName,
+//             ]);
 
-            $data = BarangModel::leftJoin('tbl_jenisbarang', 'tbl_jenisbarang.jenisbarang_id', '=', 'tbl_barang.jenisbarang_id')->leftJoin('tbl_satuan', 'tbl_satuan.satuan_id', '=', 'tbl_barang.satuan_id')->leftJoin('tbl_gudang', 'tbl_gudang.gudang_id', '=', 'tbl_barang.gudang_id')->orderBy('barang_id', 'DESC')->get();
-            return DataTables::of($data)
-                ->addIndexColumn()
-                ->addColumn('img', function ($row) {
-                    $array = array(
-                        "barang_gambar" => $row->barang_gambar,
-                    );
-                    if ($row->barang_gambar == "image.png") {
-                        $img = '<a data-bs-effect="effect-super-scaled" data-bs-toggle="modal" href="#Gmodaldemo8" onclick=gambar(' . json_encode($array) . ')><span class="avatar avatar-lg cover-image" style="background: url(&quot;' . url('/assets/default/barang') . '/' . $row->barang_gambar . '&quot;) center center;"></span></a>';
-                    } else {
-                        $img = '<a data-bs-effect="effect-super-scaled" data-bs-toggle="modal" href="#Gmodaldemo8" onclick=gambar(' . json_encode($array) . ')><span class="avatar avatar-lg cover-image" style="background: url(&quot;' . asset('storage/barang/' . $row->barang_gambar) . '&quot;) center center;"></span></a>';
-                    }
+//             return response()->json([
+//                 'status' => 'success',
+//                 'message' => 'Barang created successfully',
+//                 'data' => $barang
+//             ], 201);
 
-                    return $img;
-                })
-                ->addColumn('barcode', function ($row) {
-                    if (!is_null($row->barcode)) {
-                        // Generate the URL for the barcode image
-                        $barcodeUrl = asset('storage/barang/barcodes/' . $row->barcode);
+//         } catch (\Exception $e) {
+//             return response()->json([
+//                 'status' => 'error',
+//                 'message' => $e->getMessage()
+//             ], 500);
+//         }
+//     }
+
+//     public function update(Request $request, $id)
+//     {
+//         try {
+//             $barang = BarangModel::where('barang_kode', $id)->firstOrFail();
+            
+//             // Validate request
+//             $request->validate([
+//                 'nama' => 'required',
+//                 'kode' => 'required|unique:tbl_barang,barang_kode,' . $barang->barang_id . ',barang_id',
+//                 'jenisbarang' => 'required',
+//                 'satuan' => 'required',
+//                 'gudang' => 'required',
+//                 'harga' => 'required|numeric',
+//                 'stok' => 'required|numeric',
+//                 'foto' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
+//             ]);
+
+//             $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $request->nama)));
+
+//             $updateData = [
+//                 'jenisbarang_id' => $request->jenisbarang,
+//                 'satuan_id' => $request->satuan,
+//                 'gudang_id' => $request->gudang,
+//                 'barang_kode' => $request->kode,
+//                 'barang_nama' => $request->nama,
+//                 'barang_slug' => $slug,
+//                 'barang_harga' => $request->harga,
+//                 'barang_stok' => $request->stok,
+//             ];
+
+//             if ($request->hasFile('foto')) {
+//                 $image = $request->file('foto');
+//                 $image->storeAs('public/barang', $image->hashName());
                 
-                        // Return the URL as the value for the column, not HTML
-                        return $barcodeUrl;
-                    } else {
-                        return '-';
-                    }
-                })                
+//                 // Delete old image if it exists and is not the default
+//                 if ($barang->barang_gambar != 'image.png') {
+//                     Storage::delete('public/barang/' . $barang->barang_gambar);
+//                 }
                 
-                ->addColumn('jenisbarang', function ($row) {
-                    $jenisbarang = $row->jenisbarang_id == '' ? '-' : $row->jenisbarang_nama;
+//                 $updateData['barang_gambar'] = $image->hashName();
+//             }
 
-                    return $jenisbarang;
-                })
-                ->addColumn('satuan', function ($row) {
-                    $satuan = $row->satuan_id == '' ? '-' : $row->satuan_nama;
+//             $barang->update($updateData);
 
-                    return $satuan;
-                })
-                ->addColumn('gudang', function ($row) {
-                    $gudang = $row->gudang_id == '' ? '-' : $row->gudang_nama;
+//             return response()->json([
+//                 'status' => 'success',
+//                 'message' => 'Barang updated successfully',
+//                 'data' => $barang
+//             ]);
 
-                    return $gudang;
-                })
-                ->addColumn('currency', function ($row) {
-                    $currency = $row->barang_harga == '' ? '-' : 'Rp ' . number_format($row->barang_harga, 0);
+//         } catch (\Exception $e) {
+//             return response()->json([
+//                 'status' => 'error',
+//                 'message' => $e->getMessage()
+//             ], 500);
+//         }
+//     }
 
-                    return $currency;
-                })
-                ->addColumn('totalstok', function ($row) use ($request) {
-                    if ($request->tglawal == '') {
-                        $jmlmasuk = BarangmasukModel::leftJoin('tbl_barang', 'tbl_barang.barang_kode', '=', 'tbl_barangmasuk.barang_kode')->leftJoin('tbl_pengecek', 'tbl_pengecek.pengecek_id', '=', 'tbl_barangmasuk.pengecek_id')->where('tbl_barangmasuk.barang_kode', '=', $row->barang_kode)->sum('tbl_barangmasuk.bm_jumlah');
-                    } else {
-                        $jmlmasuk = BarangmasukModel::leftJoin('tbl_barang', 'tbl_barang.barang_kode', '=', 'tbl_barangmasuk.barang_kode')->leftJoin('tbl_pengecek', 'tbl_pengecek.pengecek_id', '=', 'tbl_barangmasuk.pengecek_id')->whereBetween('bm_tanggal', [$request->tglawal, $request->tglakhir])->where('tbl_barangmasuk.barang_kode', '=', $row->barang_kode)->sum('tbl_barangmasuk.bm_jumlah');
-                    }
+//     public function destroy($id)
+//     {
+//         try {
+//             $barang = BarangModel::where('barang_kode', $id)->firstOrFail();
 
+//             // Delete image if it exists and is not the default
+//             if ($barang->barang_gambar != 'image.png') {
+//                 Storage::delete('public/barang/' . $barang->barang_gambar);
+//             }
 
-                    if ($request->tglawal) {
-                        $jmlkeluar = BarangkeluarModel::leftJoin('tbl_barang', 'tbl_barang.barang_kode', '=', 'tbl_barangkeluar.barang_kode')->whereBetween('bk_tanggal', [$request->tglawal, $request->tglakhir])->where('tbl_barangkeluar.barang_kode', '=', $row->barang_kode)->sum('tbl_barangkeluar.bk_jumlah');
-                    } else {
-                        $jmlkeluar = BarangkeluarModel::leftJoin('tbl_barang', 'tbl_barang.barang_kode', '=', 'tbl_barangkeluar.barang_kode')->where('tbl_barangkeluar.barang_kode', '=', $row->barang_kode)->sum('tbl_barangkeluar.bk_jumlah');
-                    }
+//             // Delete QR code if it exists
+//             if ($barang->barcode) {
+//                 Storage::delete('public/barang/barcodes/' . $barang->barcode);
+//             }
 
-                    $totalstok = $row->barang_stok + ($jmlmasuk - $jmlkeluar);
-                    if ($totalstok == 0) {
-                        $result = '<span class="">' . $totalstok . '</span>';
-                    } else if ($totalstok > 0) {
-                        $result = '<span class="text-success">' . $totalstok . '</span>';
-                    } else {
-                        $result = '<span class="text-danger">' . $totalstok . '</span>';
-                    }
+//             $barang->delete();
 
+//             return response()->json([
+//                 'status' => 'success',
+//                 'message' => 'Barang deleted successfully'
+//             ]);
 
-                    return $result;
-                })
-                ->addColumn('action', function ($row) {
-                    $array = array(
-                        "barang_id" => $row->barang_id,
-                        "jenisbarang_id" => $row->jenisbarang_id,
-                        "satuan_id" => $row->satuan_id,
-                        "gudang_id" => $row->gudang_id,
-                        "barang_id" => $row->barang_id,
-                        "barang_kode" => $row->barang_kode,
-                        "barang_nama" => trim(preg_replace('/[^A-Za-z0-9-]+/', '_', $row->barang_nama)),
-                        "barang_harga" => $row->barang_harga,
-                        "barang_stok" => $row->barang_stok,
-                        "barang_gambar" => $row->barang_gambar,
-                    );
-                    $button = '';
-                    $hakEdit = AksesModel::leftJoin('tbl_submenu', 'tbl_submenu.submenu_id', '=', 'tbl_akses.submenu_id')->where(array('tbl_akses.role_id' => Session::get('user')->role_id, 'tbl_submenu.submenu_judul' => 'Barang', 'tbl_akses.akses_type' => 'update'))->count();
-                    $hakDelete = AksesModel::leftJoin('tbl_submenu', 'tbl_submenu.submenu_id', '=', 'tbl_akses.submenu_id')->where(array('tbl_akses.role_id' => Session::get('user')->role_id, 'tbl_submenu.submenu_judul' => 'Barang', 'tbl_akses.akses_type' => 'delete'))->count();
-                    if ($hakEdit > 0 && $hakDelete > 0) {
-                        $button .= '
-                        <div class="g-2">
-                        <a class="btn modal-effect text-primary btn-sm" data-bs-effect="effect-super-scaled" data-bs-toggle="modal" href="#Umodaldemo8" data-bs-toggle="tooltip" data-bs-original-title="Edit" onclick=update(' . json_encode($array) . ')><span class="fe fe-edit text-success fs-14"></span></a>
-                        <a class="btn modal-effect text-danger btn-sm" data-bs-effect="effect-super-scaled" data-bs-toggle="modal" href="#Hmodaldemo8" onclick=hapus(' . json_encode($array) . ')><span class="fe fe-trash-2 fs-14"></span></a>
-                        </div>
-                        ';
-                    } else if ($hakEdit > 0 && $hakDelete == 0) {
-                        $button .= '
-                        <div class="g-2">
-                            <a class="btn modal-effect text-primary btn-sm" data-bs-effect="effect-super-scaled" data-bs-toggle="modal" href="#Umodaldemo8" data-bs-toggle="tooltip" data-bs-original-title="Edit" onclick=update(' . json_encode($array) . ')><span class="fe fe-edit text-success fs-14"></span></a>
-                        </div>
-                        ';
-                    } else if ($hakEdit == 0 && $hakDelete > 0) {
-                        $button .= '
-                        <div class="g-2">
-                        <a class="btn modal-effect text-danger btn-sm" data-bs-effect="effect-super-scaled" data-bs-toggle="modal" href="#Hmodaldemo8" onclick=hapus(' . json_encode($array) . ')><span class="fe fe-trash-2 fs-14"></span></a>
-                        </div>
-                        ';
-                    } else {
-                        $button .= '-';
-                    }
+//         } catch (\Exception $e) {
+//             return response()->json([
+//                 'status' => 'error',
+//                 'message' => $e->getMessage()
+//             ], 500);
+//         }
+//     }
 
-                    return $button;
-                })
-                ->rawColumns(['action', 'img', 'jenisbarang', 'satuan', 'gudang', 'currency', 'totalstok'])->make(true);
-        }
-    }
+//     public function getStockCalculation(Request $request, $kode)
+//     {
+//         try {
+//             $barang = BarangModel::where('barang_kode', $kode)->firstOrFail();
+            
+//             $query = BarangmasukModel::where('barang_kode', $kode);
+//             $queryKeluar = BarangkeluarModel::where('barang_kode', $kode);
 
-    public function listbarang(Request $request)
-    {
-        if ($request->ajax()) {
-            $data = BarangModel::leftJoin('tbl_jenisbarang', 'tbl_jenisbarang.jenisbarang_id', '=', 'tbl_barang.jenisbarang_id')->leftJoin('tbl_satuan', 'tbl_satuan.satuan_id', '=', 'tbl_barang.satuan_id')->leftJoin('tbl_gudang', 'tbl_gudang.gudang_id', '=', 'tbl_barang.gudang_id')->orderBy('barang_id', 'DESC')->get();
-            return DataTables::of($data)
-                ->addIndexColumn()
-                ->addColumn('img', function ($row) {
-                    if ($row->barang_gambar == "image.png") {
-                        $img = '<span class="avatar avatar-lg cover-image" style="background: url(&quot;' . url('/assets/default/barang') . '/' . $row->barang_gambar . '&quot;) center center;"></span>';
-                    } else {
-                        $img = '<span class="avatar avatar-lg cover-image" style="background: url(&quot;' . asset('storage/barang/' . $row->barang_gambar) . '&quot;) center center;"></span>';
-                    }
+//             if ($request->has('start_date') && $request->has('end_date')) {
+//                 $query->whereBetween('bm_tanggal', [$request->start_date, $request->end_date]);
+//                 $queryKeluar->whereBetween('bk_tanggal', [$request->start_date, $request->end_date]);
+//             }
 
-                    return $img;
-                })
-                ->addColumn('jenisbarang', function ($row) {
-                    $jenisbarang = $row->jenisbarang_id == '' ? '-' : $row->jenisbarang_nama;
+//             $jmlmasuk = $query->sum('bm_jumlah');
+//             $jmlkeluar = $queryKeluar->sum('bk_jumlah');
+//             $totalstok = $barang->barang_stok + ($jmlmasuk - $jmlkeluar);
 
-                    return $jenisbarang;
-                })
-                ->addColumn('satuan', function ($row) {
-                    $satuan = $row->satuan_id == '' ? '-' : $row->satuan_nama;
+//             return response()->json([
+//                 'status' => 'success',
+//                 'data' => [
+//                     'initial_stock' => $barang->barang_stok,
+//                     'stock_in' => $jmlmasuk,
+//                     'stock_out' => $jmlkeluar,
+//                     'current_stock' => $totalstok
+//                 ]
+//             ]);
 
-                    return $satuan;
-                })
-                ->addColumn('gudang', function ($row) {
-                    $gudang = $row->gudang_id == '' ? '-' : $row->gudang_nama;
-
-                    return $gudang;
-                })
-                ->addColumn('currency', function ($row) {
-                    $currency = $row->barang_harga == '' ? '-' : 'Rp ' . number_format($row->barang_harga, 0);
-
-                    return $currency;
-                })
-                ->addColumn('totalstok', function ($row) use ($request) {
-                    if ($request->tglawal == '') {
-                        $jmlmasuk = BarangmasukModel::leftJoin('tbl_barang', 'tbl_barang.barang_kode', '=', 'tbl_barangmasuk.barang_kode')->leftJoin('tbl_pengecek', 'tbl_pengecek.pengecek_id', '=', 'tbl_barangmasuk.pengecek_id')->where('tbl_barangmasuk.barang_kode', '=', $row->barang_kode)->sum('tbl_barangmasuk.bm_jumlah');
-                    } else {
-                        $jmlmasuk = BarangmasukModel::leftJoin('tbl_barang', 'tbl_barang.barang_kode', '=', 'tbl_barangmasuk.barang_kode')->leftJoin('tbl_pengecek', 'tbl_pengecek.pengecek_id', '=', 'tbl_barangmasuk.pengecek_id')->whereBetween('bm_tanggal', [$request->tglawal, $request->tglakhir])->where('tbl_barangmasuk.barang_kode', '=', $row->barang_kode)->sum('tbl_barangmasuk.bm_jumlah');
-                    }
-
-
-                    if ($request->tglawal) {
-                        $jmlkeluar = BarangkeluarModel::leftJoin('tbl_barang', 'tbl_barang.barang_kode', '=', 'tbl_barangkeluar.barang_kode')->whereBetween('bk_tanggal', [$request->tglawal, $request->tglakhir])->where('tbl_barangkeluar.barang_kode', '=', $row->barang_kode)->sum('tbl_barangkeluar.bk_jumlah');
-                    } else {
-                        $jmlkeluar = BarangkeluarModel::leftJoin('tbl_barang', 'tbl_barang.barang_kode', '=', 'tbl_barangkeluar.barang_kode')->where('tbl_barangkeluar.barang_kode', '=', $row->barang_kode)->sum('tbl_barangkeluar.bk_jumlah');
-                    }
-
-                    $totalstok = $row->barang_stok + ($jmlmasuk - $jmlkeluar);
-                    if ($totalstok == 0) {
-                        $result = '<span class="">' . $totalstok . '</span>';
-                    } else if ($totalstok > 0) {
-                        $result = '<span class="text-success">' . $totalstok . '</span>';
-                    } else {
-                        $result = '<span class="text-danger">' . $totalstok . '</span>';
-                    }
-
-
-                    return $result;
-                })
-                ->addColumn('action', function ($row) use ($request) {
-                    $array = array(
-                        "barang_kode" => $row->barang_kode,
-                        "barang_nama" => trim(preg_replace('/[^A-Za-z0-9-]+/', '_', $row->barang_nama)),
-                        "satuan_nama" => trim(preg_replace('/[^A-Za-z0-9-]+/', '_', $row->satuan_nama)),
-                        "jenisbarang_nama" => trim(preg_replace('/[^A-Za-z0-9-]+/', '_', $row->jenisbarang_nama)),
-                    );
-                    $button = '';
-                    if ($request->get('param') == 'tambah') {
-                        $button .= '
-                        <div class="g-2">
-                            <a class="btn btn-primary btn-sm" href="javascript:void(0)" onclick=pilihBarang(' . json_encode($array) . ')>Pilih</a>
-                        </div>
-                        ';
-                    } else {
-                        $button .= '
-                    <div class="g-2">
-                        <a class="btn btn-success btn-sm" href="javascript:void(0)" onclick=pilihBarangU(' . json_encode($array) . ')>Pilih</a>
-                    </div>
-                    ';
-                    }
-
-                    return $button;
-                })
-                ->rawColumns(['action', 'img', 'jenisbarang', 'satuan', 'gudang', 'currency', 'totalstok'])->make(true);
-        }
-    }
-
-    public function proses_tambah(Request $request)
-    {
-        $img = "";
-        $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $request->nama)));
-
-        // Upload image
-        if ($request->file('foto') == null) {
-            $img = "image.png";
-        } else {
-            $image = $request->file('foto');
-            $image->storeAs('public/barang/', $image->hashName());
-            $img = $image->hashName();
-        }
-
-        // Generate barcode for barang_kode
-        try {
-            $generator = new BarcodeGeneratorPNG();
-            $barcodeImage = $generator->getBarcode($request->kode, BarcodeGeneratorPNG::TYPE_CODE_128);
-
-            // Store barcode image in the storage
-            $barcodePath = 'public/barang/barcodes/' . $request->kode . '.png';
-            Storage::put($barcodePath, $barcodeImage);
-            $barcodeFileName = basename($barcodePath);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Barcode generation failed: ' . $e->getMessage()], 500);
-        }
-
-        // Create new record in the database
-        try {
-            BarangModel::create([
-                'barang_gambar' => $img,
-                'jenisbarang_id' => $request->jenisbarang,
-                'satuan_id' => $request->satuan,
-                'gudang_id' => $request->gudang,
-                'barang_kode' => $request->kode,
-                'barang_nama' => $request->nama,
-                'barang_slug' => $slug,
-                'barang_harga' => $request->harga,
-                'barang_stok' => 0,
-                'barcode' => $barcodeFileName, // Store the barcode image file name
-            ]);
-
-            return response()->json(['success' => 'Berhasil']);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to create item: ' . $e->getMessage()], 500);
-        }
-    }
-
-    public function proses_ubah(Request $request, BarangModel $barang)
-    {
-
-        $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $request->nama)));
-
-        //check if image is uploaded
-        if ($request->hasFile('foto')) {
-
-            //upload new image
-            $image = $request->file('foto');
-            $image->storeAs('public/barang', $image->hashName());
-
-            //delete old image
-            Storage::delete('public/barang/' . $barang->barang_gambar);
-
-            //update data with new image
-            $barang->update([
-                'barang_gambar'  => $image->hashName(),
-                'jenisbarang_id' => $request->jenisbarang,
-                'satuan_id' => $request->satuan,
-                'gudang_id' => $request->gudang,
-                'barang_kode' => $request->kode,
-                'barang_nama' => $request->nama,
-                'barang_slug' => $slug,
-                'barang_harga' => $request->harga,
-                'barang_stok' => $request->stok,
-            ]);
-        } else {
-            //update data without image
-            $barang->update([
-                'jenisbarang_id' => $request->jenisbarang,
-                'satuan_id' => $request->satuan,
-                'gudang_id' => $request->gudang,
-                'barang_kode' => $request->kode,
-                'barang_nama' => $request->nama,
-                'barang_slug' => $slug,
-                'barang_harga' => $request->harga,
-                'barang_stok' => $request->stok,
-            ]);
-        }
-
-        return response()->json(['success' => 'Berhasil']);
-    }
-
-
-    public function proses_hapus(Request $request, BarangModel $barang)
-    {
-        //delete image
-        Storage::delete('public/barang/' . $barang->barang_gambar);
-
-        //delete
-        $barang->delete();
-
-        return response()->json(['success' => 'Berhasil']);
-    }
-}
+//         } catch (\Exception $e) {
+//             return response()->json([
+//                 'status' => 'error',
+//                 'message' => $e->getMessage()
+//             ], 500);
+//         }
+//     }
+// }
