@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('tbl_user', function (Blueprint $table) {
             $table->increments('user_id');
-            $table->string('role_id');
+            // $table->string('role_id');
             $table->string('user_nmlengkap');
             $table->string('user_nama');
             $table->string('user_email');
