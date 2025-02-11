@@ -16,7 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
-            'dynamic.role' => DynamicRoleMiddleware::class, // Daftarkan middleware
+            'dynamic.role' => DynamicRoleMiddleware::class,
+            'checkRoleUser' => \App\Http\Middleware\CheckRoleUser::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

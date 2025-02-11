@@ -12,9 +12,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('tbl_akses', function (Blueprint $table) {
-            $table->id();
+            $table->increments('akses_id');
+            $table->string('menu_id')->nullable();
+            $table->string('submenu_id')->nullable();
+            $table->string('othermenu_id')->nullable();
+            $table->unsignedBigInteger('role_id');  // Ganti menjadi unsignedBigInteger
+            $table->string('akses_type');
             $table->timestamps();
+        
+            // Menambahkan foreign key constraint untuk role_id yang mengarah ke tabel roles
+            $table->foreign('role_id')->references('id')->on('roles')->onDelete('cascade');
         });
+        
     }
 
     /**

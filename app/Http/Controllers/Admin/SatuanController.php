@@ -70,7 +70,7 @@ class SatuanController extends Controller
                 'satuan_slug' => $slug,
                 'satuan_keterangan' => $request->satuan_keterangan ?? '',
             ]);
-
+            
             return response()->json([
                 'success' => true,
                 'message' => 'Satuan berhasil ditambahkan',

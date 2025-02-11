@@ -108,7 +108,7 @@ class RolePermissionSeeder extends Seeder
         // Create permissions
         foreach ($permissions as $permission) {
             Permission::firstOrCreate(['name' => $permission]);
-        }
+        }       
 
         // Create roles
         $roles = [
